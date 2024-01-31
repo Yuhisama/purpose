@@ -1,11 +1,55 @@
 import numpy as np
 from PIL import Image
 import math
-import secrets
 import time
+import os
 M,N = 512,512
-image_path = '../picture/image/t001.png'
-
+# tool functions
+def image_2dto1d(image_path):
+    image = Image.open(image_path).convert('L')
+    image_array = np.array(image).flatten()
+    return image_array.astype('uint8')
+def show_image(image_array, pic_save = False, save_path = None):
+    test = Image.fromarray(image_array)
+    test.show()
+    if pic_save:
+        test.save(save_path)
+def nist_test(seq): # 這會做一個 test.txt 檔，可以拿去測試 NIST TEST。 參數就是產生出來的序列。
+    seq_256 = ((seq*(10**17)) % 256).astype('uint8')
+    test = (decimal_to_binary(i, 8) for i in seq_256)
+    file_name = '../test.txt'
+    with open(file_name,'a') as text_file:
+        try:
+            while True:
+                value = [next(test) for _ in range(3)]
+                value = ''.join(filter(str.isdigit, value))
+                text_file.write(f'{value}\n')
+        except StopIteration:
+            pass
+            print(f'Succes to write in {file_name}')
+def change_array_block8x8(array, block_length): # array : 欲拆的數組 ; block_length : 欲拆成的數組邊長
+    M,N = array.shape
+    subblocks = [
+    array[i:i+block_length, j:j+block_length]
+    for i in range(0, M, block_length)
+    for j in range(0, N, block_length)
+    ]
+    return subblocks
+def combine_array_block8x8(subblocks, subblocks_nums): # subblocks : 子數組 ; subblocks_nums : 子數組的數量
+    lens = int(subblocks_nums **(0.5))
+    arr_combined =  np.block([[subblocks[row * lens + col] for col in range(lens)] for row in range(lens)])
+    return arr_combined
+def sort_list(deal_list): # sort tools output => (value, 原始陣列的位置)
+    # dl_sort = sorted(deal_list) # dl_sort is deal_list_sort
+    # for i in range(len(deal_list)):
+    #     return deal_list.index(dl_sort[i])
+    indices = np.argsort(deal_list)
+    return indices
+def block_chages(blocks, s):
+    blocks_copy = blocks.copy()
+    for i in range(len(blocks)):
+        blocks_copy[i] = blocks[s[i]]
+    return blocks_copy
 # map function
 def logistic_map(r, x, pur_item):
     return (r * x * (1 - x)*pur_item) % 1
@@ -41,9 +85,9 @@ def random_ca_rule():
 # random rules ()
 random_rules = random_ca_rule()
 # CA main function
-def decimal_to_binary(decimal_num):
+def decimal_to_binary(decimal_num, control_bits):
     binary_str = bin(decimal_num)[2:]  # 將十進制轉換為二進制，並去掉前綴'0b'
-    num_zeros_to_add = 64 - len(binary_str)  # 計算需要補零的位數
+    num_zeros_to_add = control_bits - len(binary_str)  # 計算需要補零的位數
     if num_zeros_to_add > 0:
         binary_str = '0' * num_zeros_to_add + binary_str
     return binary_str
@@ -87,10 +131,10 @@ def generation_seq(iterations, r , x_inital , pur_item, mode):
             sin_value = sin_map(r,sin_value, pur_item)
             yield sin_value
 # switch table
-def switch_table(M,N, modes, r_values, x_initial, pur_item, ca_rule):
+def switch_table(iterations, modes, r_values, x_initial, pur_item, ca_rule):
     # 控制流量
     control_bits = 64
-    iterations = M*N
+    iterations = iterations
     # Create a list to store the seq values and final values
     final_result = np.empty(iterations)
     # Iterate through different parameter values
@@ -111,7 +155,7 @@ def switch_table(M,N, modes, r_values, x_initial, pur_item, ca_rule):
             print("mode 0 => Control:L, Seq1:T, Seq2:S")
             counter = 0
             for _ in range(int(iterations/control_bits)):
-                trans_binary = decimal_to_binary(np.uint64(next(logistic_seq) * (10**20) % (2**64)))
+                trans_binary = decimal_to_binary(np.uint64(next(logistic_seq) * (10**20) % (2**64)), control_bits)
                 switch_rules = cell_automata(trans_binary, ca_rule)
                 for switch in switch_rules:
                     if switch == '0':
@@ -124,7 +168,7 @@ def switch_table(M,N, modes, r_values, x_initial, pur_item, ca_rule):
             print("mode 1 => Control:T, Seq1:L, Seq2:S")
             counter = 0
             for _ in range(int(iterations/control_bits)):
-                trans_binary = decimal_to_binary(np.uint64(next(tent_seq) * (10**20) % (2**64)))
+                trans_binary = decimal_to_binary(np.uint64(next(tent_seq) * (10**20) % (2**64)), control_bits)
                 switch_rules = cell_automata(trans_binary, ca_rule)
                 for switch in switch_rules:
                     if switch == '0':
@@ -137,7 +181,7 @@ def switch_table(M,N, modes, r_values, x_initial, pur_item, ca_rule):
             print("mode 2 => Cotrol:S, Seq1:T, Seq2:L")
             counter = 0
             for _ in range(int(iterations/control_bits)):
-                trans_binary = decimal_to_binary(np.uint64(next(sin_seq) * (10**20) % (2**64)))
+                trans_binary = decimal_to_binary(np.uint64(next(sin_seq) * (10**20) % (2**64)), control_bits)
                 switch_rules = cell_automata(trans_binary, ca_rule)
                 for switch in switch_rules:
                     if switch == '0':
@@ -152,7 +196,7 @@ def switch_table(M,N, modes, r_values, x_initial, pur_item, ca_rule):
             register_counters = 0 
             for _ in range(int(iterations/control_bits)):
                 register = next(sin_seq)
-                trans_binary = decimal_to_binary(np.uint64(register * (10**20) % (2**64)))
+                trans_binary = decimal_to_binary(np.uint64(register * (10**20) % (2**64)), control_bits)
                 switch_rules = cell_automata(trans_binary, ca_rule)
                 for switch in switch_rules:
                     if switch == '0':
@@ -173,7 +217,7 @@ def switch_table(M,N, modes, r_values, x_initial, pur_item, ca_rule):
             register_counters = 0 
             for _ in range(int(iterations/control_bits)):
                 register = next(sin_seq)
-                trans_binary = decimal_to_binary(np.uint64(register * (10**20) % (2**64)))
+                trans_binary = decimal_to_binary(np.uint64(register * (10**20) % (2**64)), control_bits)
                 switch_rules = cell_automata(trans_binary, ca_rule)
                 for switch in switch_rules:
                     if switch == '0':
@@ -194,7 +238,7 @@ def switch_table(M,N, modes, r_values, x_initial, pur_item, ca_rule):
             register_counters = 0 
             for _ in range(int(iterations/control_bits)):
                 register = next(logistic_seq)
-                trans_binary = decimal_to_binary(np.uint64(register * (10**20) % (2**64)))
+                trans_binary = decimal_to_binary(np.uint64(register * (10**20) % (2**64)), control_bits)
                 switch_rules = cell_automata(trans_binary, ca_rule)
                 for switch in switch_rules:
                     if switch == '0':
@@ -215,7 +259,7 @@ def switch_table(M,N, modes, r_values, x_initial, pur_item, ca_rule):
             register_counters = 0 
             for _ in range(int(iterations/control_bits)):
                 register = next(logistic_seq)
-                trans_binary = decimal_to_binary(np.uint64(register * (10**20) % (2**64)))
+                trans_binary = decimal_to_binary(np.uint64(register * (10**20) % (2**64)), control_bits)
                 switch_rules = cell_automata(trans_binary, ca_rule)
                 for switch in switch_rules:
                     if switch == '0':
@@ -236,7 +280,7 @@ def switch_table(M,N, modes, r_values, x_initial, pur_item, ca_rule):
             register_counters = 0 
             for _ in range(int(iterations/control_bits)):
                 register = next(tent_seq)
-                trans_binary = decimal_to_binary(np.uint64(register * (10**20) % (2**64)))
+                trans_binary = decimal_to_binary(np.uint64(register * (10**20) % (2**64)), control_bits)
                 switch_rules = cell_automata(trans_binary, ca_rule)
                 for switch in switch_rules:
                     if switch == '0':
@@ -257,7 +301,7 @@ def switch_table(M,N, modes, r_values, x_initial, pur_item, ca_rule):
             register_counters = 0 
             for _ in range(int(iterations/control_bits)):
                 register = next(tent_seq)
-                trans_binary = decimal_to_binary(np.uint64(register * (10**20) % (2**64)))
+                trans_binary = decimal_to_binary(np.uint64(register * (10**20) % (2**64)), control_bits)
                 switch_rules = cell_automata(trans_binary, ca_rule)
                 for switch in switch_rules:
                     if switch == '0':
@@ -273,29 +317,100 @@ def switch_table(M,N, modes, r_values, x_initial, pur_item, ca_rule):
                         counter +=1
                 register_counters = 0
     return final_result
-
-
-
-
-member = 1 # 100 組使用者
-for i in range(member):
-    random_number = secrets.token_hex(16)
-    x_initial = np.float64(int(random_number[0:12], 16) / (2**48))  
-    r_values = np.float64(int(random_number[12:28], 16) / (2**64)) *5
-    pur_item = np.int64(int(random_number[28:], 16))
-    ca_rule = np.int8((int(random_number[28:], 16)) % 70)
-    modes = ca_rule % 9
-
-for j in range(9):
+# level1 main function
+def level1_final_function(seq, input_image_1d,zero_key):
+    level1_seq = np.empty(len(seq), dtype=np.uint8)
+    seq_256 = ((seq*(10**17)) % 256).astype('uint8')
+    for i in range(len(seq)):
+        if i == 0:
+            level1_seq[i] = seq_256[i] ^ input_image_1d[i] ^ zero_key
+        else:
+            level1_seq[i] =  seq_256[i] ^ input_image_1d[i] ^ level1_seq[i-1]
+    return level1_seq
+def big_shift(sorted_list, image_array): # diffusion 完的圖，先做大的 row col shift
+    image_array_copy = image_array.copy()
+    M = len(image_array)
+    N = len(image_array[0])
+    for i in range(M):
+        if sorted_list[i] % 2 == 0:
+            shift_value = int((sorted_list[i]) % N)
+            image_array_copy[i] = np.roll(image_array[i], shift = shift_value)
+        else:
+            shift_value = int((sorted_list[i]) % N)
+            image_array_copy[i] = np.roll(image_array[i], shift = -(shift_value))
+    return image_array_copy
+# level2 shift main function
+def shift_array(shift_seq,image_array, ca_rule):
+    trans_binary = [decimal_to_binary(np.uint8(i * (10**17) % 256), 8) for i in shift_seq]
+    Rshift_rules = [cell_automata(i, ca_rule) for i in trans_binary]
+    Cshift_rules = [cell_automata(i, ca_rule) for i in Rshift_rules]
+    sort_shift_seq = sort_list(shift_seq)
+    # big row shift
+    big_row_shift_subblocks = big_shift(sort_shift_seq[0:512], image_array)
+    # big col shift
+    big_row_rot90= np.rot90(big_row_shift_subblocks, -1)
+    big_col_shift_subblocks = big_shift(sort_shift_seq[0:512], big_row_rot90)
+    big_shift_subblocks = np.rot90(big_col_shift_subblocks, 1)
+    # divide to subblocks
+    sublocks = change_array_block8x8(big_shift_subblocks,8) # big shift 完後的 subblocks
+    # 將對應sort_shift_seq排序的sublocks交換到相應的位置
+    scm_sublocks = block_chages(sublocks, sort_shift_seq) # 換過位置的subblocks
+    # CA rules 的 shift function
+    def shift_function(sublocks, shift_rules):
+        M = len(sublocks[0])
+        shift_values = [int(i, 2) for i in shift_rules]
+        for index in range(len(sublocks)):
+            counter = 0
+            for i in shift_rules[index]:
+                if i == '0':
+                    shift_value = int(shift_values[0] % M)
+                    sublocks[index][counter] = np.roll(sublocks[index][counter], shift = shift_value)
+                elif i == '1':
+                    shift_value = int(shift_values[0] % M)
+                    sublocks[index][counter] = np.roll(sublocks[index][counter], shift = -(shift_value))
+                counter += 1
+        final_blocks = sublocks
+        return final_blocks
+    # row shift
+    Rowshift = shift_function(scm_sublocks, Rshift_rules)
+    # column shift
+    rot90 = [np.rot90(i, -1) for i in Rowshift]
+    Colshift = shift_function(rot90, Cshift_rules)
+    Colshift = [np.rot90(i, 1) for i in Colshift]
+    combine_block = combine_array_block8x8(Colshift, len(Colshift))
+    return combine_block
+# secret key function
+def secret_key(member):
+    secret_key_path = r'C:\Users\Niu\Desktop\purpose_code\secret_key.txt'
+    with open(secret_key_path, 'r') as file: # 從 secrets_key.txt 讀取 secret_keys
+        secrets_keys = file.readlines()[:member]
+    return secrets_keys
+# main function
+# computer_acc = 
+def encode(secret_key, image_path, pic_save = False, save_path = None, set_level = None):
+    input_image_1d = image_2dto1d(image_path) # 輸入圖片轉成 1D 的 array
+    # parameter
+    x_initial = np.float64(int(secret_key[0:12], 16) / (2**48))  
+    r_values = np.float64(int(secret_key[12:28], 16) / (2**64)) *5 
+    pur_item = np.int64(int(secret_key[28:], 16)+1)
+    ca_rule = np.int8(pur_item % 70)
+    modes = np.int8(ca_rule % 9)
+    # main function 
     start_time = time.time()
-    final_result = switch_table(M,N,j,x_initial, r_values, pur_item, random_rules[ca_rule])
-    print(len(final_result))
-    print(type(final_result[0]))
-    print(final_result)
-    print(final_result[::-1])
+    seq = switch_table((M*N), modes, x_initial, r_values, pur_item, random_rules[ca_rule]) # diffusion seq
+    # level1 diffusion
+    level1_pic = level1_final_function(seq, input_image_1d, ca_rule)
+    # level2 confusion
+    shift_seq = switch_table(4096, modes, x_initial, r_values, pur_item, random_rules[ca_rule])
+    level1_pic_array = level1_pic.reshape((M,N))
+    level2_shift_pic = shift_array(shift_seq, level1_pic_array.copy(), random_rules[ca_rule])
     end_time = time.time()
     print(f'exe time is {end_time - start_time} seconds')
     print("--------------------------------------------------------")
+    if set_level == '1':
+        show_image(level1_pic_array, pic_save= pic_save, save_path= save_path)
+    elif set_level == '2':
+        show_image(level2_shift_pic, pic_save= pic_save, save_path= save_path)
 
 
 
@@ -318,37 +433,3 @@ for j in range(9):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# if __name__ == '__main__':
-    # member = 100 # 3 組
-    # for i in range(member):
-    #     random_number = secrets.token_hex(16)
-    #     x_initial = int(random_number[0:12], 16) / (2**48)  # Initial value of x
-    #     r_values = (int(random_number[12:28], 16) / (2**64)) *5
-    #     pur_item = int(random_number[28:], 16)
-    #     ca_rule = (int(random_number[28:], 16)) % 70
-    #     final_result = (interate(x_initial, r_values, pur_item, ca_rule))
-        # file_name = os.path.join(f"randomness_testsuite/yuhidata/{i}.txt")
-        # with open(file_name, 'w') as file:
-        #     for result in final_result:
-        #         binary_result = decimal_to_binary(int(result*(2**24)))
-        #         file.write(f"{binary_result}\n")

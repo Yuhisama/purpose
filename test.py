@@ -1,31 +1,19 @@
 import numpy as np
-import time
-import secrets
-def logistic_map(r, x, pur_item):
-    return r * x * (1 - x)*pur_item % 1
-def test(iterations, r , x , pur_item):
-    for i in range(iterations):
-        x = logistic_map(r, x, pur_item)
-        yield x
-
-def decimal_to_binary(decimal_num):
-    binary_str = bin(decimal_num)[2:]  # 將十進制轉換為二進制，並去掉前綴'0b'
-    num_zeros_to_add = 64 - len(binary_str)  # 計算需要補零的位數
-    if num_zeros_to_add > 0:
-        binary_str = '0' * num_zeros_to_add + binary_str
-    return binary_str
-random_number = secrets.token_hex(16)
-x_initial = np.float64(int(random_number[0:12], 16) / (2**48))  
-r_values = np.float64(int(random_number[12:28], 16) / (2**64)) *5
-pur_item = np.int64(int(random_number[28:], 16))
-ca_rule = np.int8((int(random_number[28:], 16)) % 70)
-modes = ca_rule % 9
-b = test(100, x_initial, r_values, pur_item)
-final = 0
-for i in range(100):
-    final = next(b)
-print(final* (10**20))
-final_int = np.uint64(final * (10**20) % (2**64))
-fianl_bin = decimal_to_binary(final_int)
-print(len(fianl_bin))
-print(fianl_bin)
+# secret_key = '1c12f81d63a215e90951ac29afa5c03d'
+K5C = '5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C'
+K5D = '5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5D'
+K5E = '5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5E'
+image_name = {'5C': K5D, '5D': K5D, '5E': K5E} 
+for i in image_name.keys():
+    x_initial = np.float64(int(image_name[i][0:12], 16) / (2**48))  
+    r_values = np.float64(int(image_name[i][12:28], 16) / (2**64)) *5 
+    pur_item = np.int64(int(image_name[i][28:], 16))
+    print(image_name[i][28:])
+    ca_rule = np.int8(pur_item % 70)
+    modes = np.int8(ca_rule % 9)
+    print(f'x_initial -> {x_initial}')
+    print(f'r_values -> {r_values}')
+    print(f'pur_item -> {pur_item}')
+    print(f'ca_rule -> {ca_rule}')
+    print(f'modes -> {modes}')
+    print('--------------------------------------------------')
