@@ -135,8 +135,8 @@ def switch_table(iterations, modes, r_values, x_initial, pur_item, ca_rule):
         logistic_value ,tent_value ,sin_value = next(seq)
     # selec mode
     mode = modes % 9
-    logistic_seq = generation_seq(iterations, r , logistic_value, pur_item, mode = 'L')
-    tent_seq = generation_seq(iterations,r,tent_value, pur_item, mode = 'T')
+    logistic_seq = generation_seq(iterations, r*4 , logistic_value, pur_item, mode = 'L')
+    tent_seq = generation_seq(iterations,r*2,tent_value, pur_item, mode = 'T')
     sin_seq = generation_seq(iterations,r, sin_value, pur_item, mode = 'S')
     # main function
     match mode:
@@ -309,7 +309,7 @@ def switch_table(iterations, modes, r_values, x_initial, pur_item, ca_rule):
 # level1 main function
 def decode_level1_final_function(seq, input_image_1d,zero_key):
     level1_seq = np.empty(len(seq), dtype=np.uint8)
-    seq_256 = ((seq*(10**14)) % 256).astype('uint8')
+    seq_256 = ((seq*(10**17)) % 256).astype('uint8')
     for i in range(len(seq)):
         if i == 0:
             level1_seq[i] = seq_256[i] ^ input_image_1d[i] ^ zero_key
@@ -341,7 +341,7 @@ def big_shift(sorted_list, image_array): # step 11 switch
     return image_array_copy
 # level2 shift main function
 def decode_shift_array(shift_seq,image_array, ca_rule):
-    trans_binary = [decimal_to_binary(np.uint8(i * (10**14) % 256), 8) for i in shift_seq]
+    trans_binary = [decimal_to_binary(np.uint8(i * (10**17) % 256), 8) for i in shift_seq]
     Rshift_rules = [cell_automata(i, ca_rule) for i in trans_binary]
     Cshift_rules = [cell_automata(i, ca_rule) for i in Rshift_rules]
     sort_shift_seq = sort_list(shift_seq)
@@ -386,18 +386,21 @@ def secret_key(member):
         secrets_keys = file.readlines()[:member]
     return secrets_keys
 # main function
-def decode(secret_key, image_path, pic_save = False, save_path = None, set_level = None):
+def decode(key_image,secret_key, image_path, pic_save = False, save_path = None, set_level = None): # key_image 為明文的圖
+    key_image_1d = image_2dto1d(key_image) # 輸入key_image圖片轉成 1D 的 array
+    mean_key_image_1d = np.mean(key_image_1d) % 1 # 只取小數拿來當special source 的值
     # parameter
-    x_initial = np.float64(int(secret_key[0:12], 16) / (2**48))  
-    r_values = np.float64(int(secret_key[12:28], 16) / (2**64)) *5
-    pur_item = np.int64(int(secret_key[28:], 16))
-    ca_rule = np.int8((int(secret_key[28:], 16)) % 70)
-    modes = np.int8(ca_rule % 9)
+    r_values = np.float64(int(secret_key[12:28], 16) / (2**64))  # 基礎系統參數，進入chaos系統時，三個混沌分別都會乘自己系統參數的範圍最大值
+    pur_item = np.int64(int(secret_key[28:], 16)) # 提出的擴展參數
+    ca_rule = np.int8(pur_item % 70) # CA規則表對應的位置，有做好的balance rule的陣列，這裡就叫CA規則表
+    modes = np.int8(ca_rule % 9) # 選擇9個模式的變數
+    special_source = logistic_map(r_values, mean_key_image_1d, pur_item)
+    x_initial = np.float64(int(secret_key[0:12], 16) / (2**48)) + special_source  # x 初始值
     # main function 
     start_time = time.time()
     seq = switch_table((M*N), modes, x_initial, r_values, pur_item, random_rules[ca_rule]) # diffusion seq
     if set_level == '1': 
-        input_image_1d = image_2dto1d(image_path)
+        input_image_1d = image_2dto1d(image_path) # 輸入圖片轉成 1D 的 array
         level1_origin_pic = decode_level1_final_function(seq, input_image_1d, ca_rule)
         level1_origin_pic_array = level1_origin_pic.reshape((M,N))
         end_time = time.time()
@@ -408,7 +411,8 @@ def decode(secret_key, image_path, pic_save = False, save_path = None, set_level
         image = Image.open(image_path).convert('L')
         image_array = np.array(image, dtype = np.uint8)
         # level2 confusion(decode)
-        shift_seq = switch_table(4096, modes, x_initial, r_values, pur_item, random_rules[ca_rule])
+        confusion_x_inital = x_initial * r_values # confusion 使用的初值
+        shift_seq = switch_table(4096, modes, confusion_x_inital, r_values, pur_item, random_rules[ca_rule])
         level2_origin_shift_pic = decode_shift_array(shift_seq, image_array.copy(), random_rules[ca_rule])
         # level1 diffusion(decode)
         level2_origin_shift_pic_1d = level2_origin_shift_pic.flatten()

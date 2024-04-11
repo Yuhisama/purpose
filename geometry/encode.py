@@ -146,9 +146,9 @@ def switch_table(iterations, modes, r_values, x_initial, pur_item, ca_rule):
         logistic_value ,tent_value ,sin_value = next(seq)
     # selec mode
     mode = modes % 9
-    logistic_seq = generation_seq(iterations, r , logistic_value, pur_item, mode = 'L')
-    tent_seq = generation_seq(iterations,r,tent_value, pur_item, mode = 'T')
-    sin_seq = generation_seq(iterations,r, sin_value, pur_item, mode = 'S')
+    logistic_seq = generation_seq(iterations, r*4 , logistic_value, pur_item, mode = 'L') # r => 0~4
+    tent_seq = generation_seq(iterations,r*2,tent_value, pur_item, mode = 'T') # r => 0~2
+    sin_seq = generation_seq(iterations,r, sin_value, pur_item, mode = 'S') # r => 0~1
     # main function
     match mode:
         case 0: # Control :L, Seq1:T, Seq2:S
@@ -389,21 +389,24 @@ def secret_key(member):
 # computer_acc = 
 def encode(secret_key, image_path, pic_save = False, save_path = None, set_level = None):
     input_image_1d = image_2dto1d(image_path) # 輸入圖片轉成 1D 的 array
+    mean_input_image_1d = np.mean(input_image_1d) % 1 # 只取小數拿來當special source 的值
     # parameter
-    x_initial = np.float64(int(secret_key[0:12], 16) / (2**48))  
-    r_values = np.float64(int(secret_key[12:28], 16) / (2**64)) *5 
-    pur_item = np.int64(int(secret_key[28:], 16)+1)
-    ca_rule = np.int8(pur_item % 70)
-    modes = np.int8(ca_rule % 9)
-    # main function 
+    r_values = np.float64(int(secret_key[12:28], 16) / (2**64))  # 基礎系統參數，進入chaos系統時，三個混沌分別都會乘自己系統參數的範圍最大值
+    pur_item = np.int64(int(secret_key[28:], 16)) # 提出的擴展參數
+    ca_rule = np.int8(pur_item % 70) # CA規則表對應的位置，有做好的balance rule的陣列，這裡就叫CA規則表
+    modes = np.int8(ca_rule % 9) # 選擇9個模式的變數
+    special_source = logistic_map(r_values, mean_input_image_1d, pur_item)
+    x_initial = np.float64(int(secret_key[0:12], 16) / (2**48)) + special_source  # x 初始值
+    # main function _
     start_time = time.time()
-    seq = switch_table((M*N), modes, x_initial, r_values, pur_item, random_rules[ca_rule]) # diffusion seq
+    seq = switch_table((M*N), modes, x_initial, r_values, pur_item, random_rules[ca_rule]) # keystream
     # level1 diffusion
-    level1_pic = level1_final_function(seq, input_image_1d, ca_rule)
+    level1_pic = level1_final_function(seq, input_image_1d, ca_rule) # 原始圖和keystream xor 完的序列
     # level2 confusion
-    shift_seq = switch_table(4096, modes, x_initial, r_values, pur_item, random_rules[ca_rule])
-    level1_pic_array = level1_pic.reshape((M,N))
-    level2_shift_pic = shift_array(shift_seq, level1_pic_array.copy(), random_rules[ca_rule])
+    confusion_x_inital = x_initial * r_values # confusion 使用的初值
+    shift_seq = switch_table(4096, modes, confusion_x_inital, r_values, pur_item, random_rules[ca_rule]) # 重新做一個序列
+    level1_pic_array = level1_pic.reshape((M,N)) # 將 Diffusion 完的序列，組成 MxN 大小的矩陣
+    level2_shift_pic = shift_array(shift_seq, level1_pic_array.copy(), random_rules[ca_rule]) # Confusion 的部分
     end_time = time.time()
     print(f'exe time is {end_time - start_time} seconds')
     print("--------------------------------------------------------")
