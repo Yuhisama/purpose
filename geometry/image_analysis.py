@@ -7,6 +7,7 @@ from PIL import Image
 import random
 from scipy.stats import norm
 from . import decode, encode
+# 
 # Gray image simulation
 def gray_image_simulation(image_list):
     image_path = ['picture/grayscale/', 'picture/encoded_image/', 'picture/decoded_image/']
@@ -127,12 +128,12 @@ def correlation_analysis():
         correlation_values = [correlation_horizontal, correlation_vertical, correlation_diagonal]
         return correlation_values
     # 圖片名稱
-    image_names = [['lena'], ['encoded_level2_lena']]
+    image_names = [['baboon'], ['encoded_level2_baboon']]
     image_title = ['Correlation_Horizontal', 'Correlation_Vertical', 'Correlation_Diagonal']
     labels = [['horizel', 'horizer'], ['verticalu', 'verticald'], ['diagonalr', 'diagonal']]
     # 創建子圖
     fig, axes = plt.subplots(2, 3, figsize=(12, 6))
-    fig.suptitle('Correlation Analysis(Test picture:lena.png)', fontsize = 20)
+    fig.suptitle('Correlation Analysis(Test picture:baboon.png)', fontsize = 20)
     for i in range(2):   
         values = get_values(os.path.join(image_path[i]+image_names[i][0]+'.png'))
         correlation_values = generate_correlation_values(values)
@@ -156,6 +157,7 @@ def X_square_test(image_list, chose_image_level = 2): # chose_image_level 默認
     image_size = 512 * 512
     # 每個像素值的預期次數
     expected_counts = image_size / 256
+    print(f'臨界值: {critical_value}')
     image_path = ['picture/grayscale/', 'picture/encoded_image/']
     def image_2dto1d(image_path):
         image = Image.open(image_path).convert('L')

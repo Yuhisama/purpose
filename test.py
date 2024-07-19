@@ -1,29 +1,113 @@
 from PIL import Image
 import numpy as np
 import os
+import math
+import time
+
 def image_2dto1d(image_path):
     image = Image.open(image_path).convert('L')
     image_array = np.array(image).flatten()
     return image_array.astype('uint8')
 def logistic_map(r, x, pur_item):
     return (r * x * (1 - x)*pur_item) % 1
-input_image_1d = image_2dto1d('picture/grayscale/lena.png') # 輸入圖片轉成 1D 的 array
-catest = image_2dto1d('picture/NPCR_UACI/change_one_pixel_lena.png')
+def tent_map(x, r, pur_item):
+    if x < 0.5:
+        return (r * x * pur_item) % 1
+    else:
+        return (r * (1 - x) * pur_item) % 1
+def sin_map(x, r, pur_item):
+    return (r * math.sin(math.pi * x) * pur_item) % 1
+def ca_rule(rules):
+    patterns = {} # rules 的序列
+    pattern_list = ['000', '001', '010', '011', '100', '101', '110', '111']
+    for i in range(7, -1 ,-1):
+        if int(rules/(2**i)) == 1:
+            patterns[pattern_list[i]] = '1'
+            rules = rules - 2**i
+        else:
+            patterns[pattern_list[i]] = '0'
+    return patterns
+def random_ca_rule():
+    random_rules = []
+    for rule in range(256):
+        counter = 0
+        rules_patterns = ca_rule(rule)
+        for value in rules_patterns.values():
+            counter += int(value)
+        if counter == 4:
+            random_rules.append(rule)
+    return random_rules
+# random rules ()
+random_rules = random_ca_rule()
+print(random_rules)
+# secret_key ='76d7ca04a2feb3739fa840ef591e1006b532f7a348ed58994a7668a8b2b9ab5c'
+# input_image_1d = image_2dto1d('picture/grayscale/baboon.png') # 輸入圖片轉成 1D 的 array
+# catest = image_2dto1d('picture/NPCR_UACI/change_one_pixel_lena.png')
+# mean_input_image_1d = np.mean(input_image_1d) % 1 # 只取小數拿來當special source 的值
 
-secret_key = '1c12f81d63a215e90951ac29afa5c03d'
-x_initial = np.float64(int(secret_key[0:12], 16) / (2**48))   # x 初始值
-r_values = np.float64(int(secret_key[12:28], 16) / (2**64))  # 基礎系統參數，進入chaos系統時，三個混沌分別都會乘自己系統參數的範圍最大值
-pur_item = np.int64(int(secret_key[28:], 16)) # 提出的擴展參數
-# ca_rule = np.int8(pur_item % 70) # CA規則表對應的位置，有做好的balance rule的陣列，這裡就叫CA規則表
+
+# # 原始系統參數
+# logistic_r_values = np.float64(int(secret_key[36:44], 16) / (2**32))  # logistic 基礎系統參數 32 bits
+# tent_r_values = np.float64(int(secret_key[44:52], 16) / (2**32))  # tent 基礎系統參數 32 bits
+# sine_r_values = np.float64(int(secret_key[52:60], 16) / (2**32))  # sine 基礎系統參數 32 bits
+# # 提出的擴展系統參數
+# pur_item = np.int64(int(secret_key[60:], 16)) # 提出的擴展參數 16 bits
+# # print(f'logistic_r_values = {logistic_r_values}, tent_r_values = {tent_r_values}, sine_r_values = {sine_r_values}')
+# # print(f'pur_item = {pur_item}')
+# # 選取系統要使用哪個 CA rule、選取系統要用哪一個模式組合
+# ca_rule = np.int64(int(secret_key[62:], 16) % 70)  # CA規則表對應的位置，有做好的balance rule的陣列，這裡就叫CA規則表
 # modes = np.int8(ca_rule % 9) # 選擇9個模式的變數
+# # print(f'ca_rule = {ca_rule}')
+# # print(f'modes = {modes}')
 
-a = np.mean(input_image_1d) % 1
-b = np.mean(catest) % 1
-a_l = logistic_map(r_values, a, pur_item)
-b_l = logistic_map(r_values, b, pur_item)
-test = a_l + x_initial
-print(x_initial)
-print(test)
+
+# special_source = logistic_map(logistic_r_values, mean_input_image_1d, pur_item)
+# # 初始值
+# logistic_initial = (np.float64(int(secret_key[0:12], 16) / (2**48)) + special_source) % 1  # logistic 初始值 48 bits
+# tent_inital = (np.float64(int(secret_key[12:24], 16) / (2**48)) + special_source) % 1 # tent 初始值 48 bits
+# sine_inital = (np.float64(int(secret_key[24:36], 16) / (2**48)) + special_source) % 1# sine 初始值 48 bits
+# # 初始值和遠始參數組成群組
+# initial_values = [logistic_initial, tent_inital, sine_inital] # 將初始值組成群組好管理
+# r_values = [logistic_r_values, tent_r_values, sine_r_values]
+
+# def generation_seq(iterations, r_values , initial_values , pur_item, mode):
+#     logistic_value , tent_value, sin_value = initial_values[0], initial_values[1], initial_values[2]
+#     if mode == '0':
+#         for _ in range(iterations):
+#             logistic_value = logistic_map(r_values[0], logistic_value, pur_item)
+#             tent_value = tent_map(r_values[1], tent_value, pur_item)
+#             sin_value = sin_map(r_values[2],sin_value, pur_item)
+#             yield logistic_value, tent_value, sin_value
+#     elif mode == 'L':
+#         for _ in range(iterations):
+#             logistic_value = logistic_map(r_values[0], logistic_value, pur_item)
+#             yield logistic_value
+#     elif mode == 'T':
+#         for _ in range(iterations):
+#             tent_value = tent_map(r_values[1], tent_value, pur_item)
+#             yield tent_value
+#     elif mode == 'S':
+#         for _ in range(iterations):
+#             sin_value = sin_map(r_values[2],sin_value, pur_item)
+#             yield sin_value
+
+# seq = generation_seq(100, r_values, initial_values, pur_item, mode = '0') 
+# for _ in range(100):
+#     logistic_value ,tent_value ,sin_value = next(seq)
+# print(logistic_value, tent_value, sin_value)
+
+
+
+
+
+
+# a = np.mean(input_image_1d) % 1
+# b = np.mean(catest) % 1
+# a_l = logistic_map(r_values, a, pur_item)
+# b_l = logistic_map(r_values, b, pur_item)
+# test = a_l + x_initial
+# print(x_initial)
+# print(test)
 
 
 # standard_test_images = ['baboon', 'cameraman', 'lena', 'house', 'jetplane', 'peppers', 'pirate', 'lake']

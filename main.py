@@ -3,7 +3,7 @@ from geometry import image_analysis as image_analysis
 from geometry import encode
 from geometry import decode
 # standard test images
-standard_test_images = ['baboon', 'cameraman', 'lena', 'house', 'jetplane', 'peppers', 'pirate', 'lake']
+standard_test_images = ['baboon', 'cameraman', 'house', 'jetplane', 'peppers', 'pirate', 'lake']
 # image path
 set_pic_nums = len(standard_test_images) # 要幾張圖片
 image_path = [f'picture/grayscale/{standard_test_images[i]}.png' for i in range(set_pic_nums)]
@@ -26,18 +26,19 @@ secret_key = [i.strip() for i in encode.secret_key(member)] # 4 組金鑰
 # decode.decode(secret_key[0], level2_encode_save_path[1] ,set_level= '2')
 # Simulation and Performance analysis of gray image
 # 以下的是加密分析部分
+# 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Gray image simulation
 # image_analysis.gray_image_simulation(standard_test_images[0:4])
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Key Sensitivity analysis
 # 先產生不同些許不同參數但加密相同圖片
-# K5C = '5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C'
-# K5D = '5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5D'
-# K5E = '5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5E'
+# K5C = '5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C'
+# K5D = '5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5D'
+# K5E = '5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C5E'
 # image_name = {'5C': K5C, '5D': K5D, '5E': K5E} # original image 是沒有動參數的的加密圖，後兩者都有動到極小的值
 # for i in image_name.keys():
-#     image_path = f'picture/grayscale/lena.png'
+#     image_path = f'picture/grayscale/baboon.png'
 #     encoded_image_name = i
 #     key_sensitivity_parameters = image_name[i]
 #     keysense_path = 'picture/keysense_encode' # 設定 keysense image 存放資料夾位置
@@ -55,7 +56,7 @@ secret_key = [i.strip() for i in encode.secret_key(member)] # 4 組金鑰
 # image_analysis.X_square_test(standard_test_images[0:4])
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Information Entropy analysis
-# image_analysis.entropy_analysis(standard_test_images[0:4])
+image_analysis.entropy_analysis(standard_test_images[0:4])
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Local information entropy analysis
 # log -> 這裡的結果時常會是Fail，但正常來說 Entropy 越高越好，但論文中統計出來的 Entropy 範圍，就是 [7.901515698, 7.903422936]。
@@ -74,7 +75,7 @@ secret_key = [i.strip() for i in encode.secret_key(member)] # 4 組金鑰
 # image_analysis.pixel_disparity_analysis(standard_test_images)
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Differential attack analysis
-image_analysis.differential_attack_analysis(secret_key[0], standard_test_images)
+# image_analysis.differential_attack_analysis(secret_key[0], standard_test_images)
 # image_analysis.differential_attack_50_times_analysis(secret_key[0], standard_test_images[0:4])
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Resist known-plaintext and chosen-plaintext attacks analysis
