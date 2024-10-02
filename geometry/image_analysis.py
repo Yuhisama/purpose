@@ -75,19 +75,20 @@ def histogram_analysis(image_list):
     bword_count = (chr(97+i) for i in range(len(image_name[0])*len(image_title)))
     # 創建2x4的子圖布局
     fig, axes = plt.subplots(len(image_name),len(image_name[0]), figsize=(12,6))
-    fig.suptitle('Histogram Analysis', fontsize = 20)
+    plt.rcParams['font.family'] = 'Times New Roman'
+    # fig.suptitle('Histogram Analysis', fontsize = 20)
     for i in range(len(image_name)):
         for j in range(len(image_name[0])):
             image_value = image_2dto1d(os.path.join(image_path[i]+image_name[i][j]+'.png'))
             hist, bins = np.histogram(list(image_value), bins = 256, range = (0, 256))
             ax = axes[i, j]
-            ax.bar(bins[:-1], hist, width = 1)
+            ax.bar(bins[:-1], hist, width = 1,color='black')
             if i == 0:
                 ax.text(0.5,-0.3,f'({next(fword_count)}){image_title[i]} {image_name[i][j].capitalize()}',size=12,ha="center",transform=ax.transAxes)
             else:
                 ax.text(0.5,-0.3,f'({next(fword_count)}){image_title[i]} ({next(bword_count)})',size=12,ha="center",transform=ax.transAxes)
-            ax.set_xlabel('Image gray value', fontsize = 10)
-            ax.set_ylabel('Items', fontsize = 10)
+            ax.set_xlabel('Image gray value', fontsize = 10, fontdict={'family': 'Times New Roman'})
+            ax.set_ylabel('Items', fontsize = 10, fontdict={'family': 'Times New Roman'})
             ax.tick_params(axis='both', which='major', labelsize=8)
     plt.tight_layout()
     plt.show()
@@ -592,34 +593,43 @@ def ResistKP_and_ChosenP_Attack_analysis(secret_key):
         for i in image_array:
             yield i
     def histogram_image(image_name):
+        plt.rcParams['font.family'] = 'Times New Roman'
         for i in range(2):
             image_value = image_2dto1d(os.path.join(RKPCPA_folder,image_name[i][1]))
             hist, bins = np.histogram(list(image_value), bins = 256, range = (0, 256))
+            # 設置 x 和 y 軸的字體
+            plt.xlabel('Image gray value', fontsize=10, fontdict={'family': 'Times New Roman'})
+            plt.ylabel('Items', fontsize=10, fontdict={'family': 'Times New Roman'})
+            
+            # 設置 x 和 y 軸刻度的字體
+            plt.xticks(fontsize=10, fontname='Times New Roman')
+            plt.yticks(fontsize=10, fontname='Times New Roman')
             plt.figure(figsize=(8, 6))
-            plt.bar(bins[:-1], hist, width=1)
+            plt.bar(bins[:-1], hist, width=1,color='black')
+            plt.tight_layout()
             plt.savefig(os.path.join(RKPCPA_folder, image_name[i][2]))
-
+    
     # Step 1 => 製作 黑白 圖像並儲存進資料夾中
-    # white_array = np.full((512,512), 255, dtype = np.uint8)
-    # black_array = np.full((512,512), 0, dtype = np.uint8)
-    # white_image = Image.fromarray(white_array)
-    # black_image = Image.fromarray(black_array)
-    # white_image.save(os.path.join(RKPCPA_folder+'white_image.png'), 'png')
-    # black_image.save(os.path.join(RKPCPA_folder+'black_image.png'), 'png')
+    white_array = np.full((512,512), 255, dtype = np.uint8)
+    black_array = np.full((512,512), 0, dtype = np.uint8)
+    white_image = Image.fromarray(white_array)
+    black_image = Image.fromarray(black_array)
+    white_image.save(os.path.join(RKPCPA_folder+'white_image.png'), 'png')
+    black_image.save(os.path.join(RKPCPA_folder+'black_image.png'), 'png')
     # Step 2 => 加密 黑白兩張圖片，將加密圖儲存起來，順便也將histogram圖也存起來
-    # encode.encode(secret_key,   os.path.join(RKPCPA_folder+'white_image.png'), pic_save = True, save_path = os.path.join(RKPCPA_folder+'white_c_image.png'), set_level= '2')
-    # encode.encode(secret_key,   os.path.join(RKPCPA_folder+'black_image.png'), pic_save = True, save_path = os.path.join(RKPCPA_folder+'black_c_image.png'), set_level= '2')
-    # histogram_image(image_name) # 產生直方圖
+    encode.encode(secret_key,   os.path.join(RKPCPA_folder+'white_image.png'), pic_save = True, save_path = os.path.join(RKPCPA_folder+'white_c_image.png'), set_level= '2')
+    encode.encode(secret_key,   os.path.join(RKPCPA_folder+'black_image.png'), pic_save = True, save_path = os.path.join(RKPCPA_folder+'black_c_image.png'), set_level= '2')
+    histogram_image(image_name) # 產生直方圖
     # Step 3 => 使用直方圖分析，並將對比圖做出來 
-    fig, axes = plt.subplots(2,3, figsize = (18,6))
-    fig.suptitle("Resist Known-plaintext and chosen-plaintext attack analysis")
-    for i in range(2):
-        for j in range(3):
-            image = Image.open(os.path.join(RKPCPA_folder,image_name[i][j])).convert('RGB')
-            ax = axes[i,j]
-            ax.imshow(image)
-            ax.set_title(f'{image_name[i][j]}')
-            ax.axis('off')
-    plt.tight_layout()
-    plt.show()
+    # fig, axes = plt.subplots(2,3, figsize = (18,6))
+    # fig.suptitle("Resist Known-plaintext and chosen-plaintext attack analysis")
+    # for i in range(2):
+    #     for j in range(3):
+    #         image = Image.open(os.path.join(RKPCPA_folder,image_name[i][j])).convert('RGB')
+    #         ax = axes[i,j]
+    #         ax.imshow(image)
+    #         ax.set_title(f'{image_name[i][j]}')
+    #         ax.axis('off')
+    # plt.tight_layout()
+    # plt.show()
 

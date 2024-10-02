@@ -14,12 +14,13 @@ level2_encode_save_path = [f'picture/encoded_image/encoded_level2_{standard_test
 decode_save_path = [f'picture/decoded_image/decoded_{standard_test_images[i]}.png' for i in range(set_pic_nums)]
 level2_decode_save_path = [f'picture/decoded_image/decoded_level2_{standard_test_images[i]}.png' for i in range(set_pic_nums)]
 # # secret key 
-member = len(standard_test_images) # 有幾個使用者
+# member = len(standard_test_images) # 有幾個使用者
+member = int(input("輸入要幾個測試金鑰:")) # 有幾個使用者
 secret_key = [i.strip() for i in encode.secret_key(member)] # 4 組金鑰
 # Call encode part
 # for i in range(set_pic_nums):
-#     encode.encode(secret_key[0], image_path[i], pic_save = True, save_path = level2_encode_save_path[i], set_level= '2')
-# encode.encode(secret_key[0], image_path[1],set_level= '2')
+#     encode.encode(secret_key[0], image_path[i], pic_save= True, save_path= level2_encode_save_path[i] , set_level= '2')
+# encode.encode(secret_key[0], image_path[3],set_level= '2')
 # Call decode part
 # for i in range(set_pic_nums):
 #     decode.decode(image_path[i],secret_key[0], level2_encode_save_path[i], pic_save= True, save_path= level2_decode_save_path[i] ,set_level= '2')
@@ -56,7 +57,7 @@ secret_key = [i.strip() for i in encode.secret_key(member)] # 4 組金鑰
 # image_analysis.X_square_test(standard_test_images[0:4])
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Information Entropy analysis
-image_analysis.entropy_analysis(standard_test_images[0:4])
+# image_analysis.entropy_analysis(standard_test_images[0:4])
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Local information entropy analysis
 # log -> 這裡的結果時常會是Fail，但正常來說 Entropy 越高越好，但論文中統計出來的 Entropy 範圍，就是 [7.901515698, 7.903422936]。
